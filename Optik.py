@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-#Author: Santiago Torres and ?
-
 from matplotlib.font_manager import FontProperties
 import numpy as np
 import matplotlib.pyplot as plt

@@ -48,18 +48,20 @@ class lego:
         else:
             raise "Buscar name en la base, no sé cómo :v"
 
-    def use(self, t, first=False, bottom=False):
+    def use(self, t, first=False, bottom=False, scnd=False):
         self.thickness = t
         self.alpha = alpha_function(self.thickness, self.k, self.lambd)
         self.gamma = gamma_function(self.thickness, self.n, self.lambd)
         if first:
             self.first = first
             self.bottom = bottom
+            self.scnd = scnd
             self.g = g_function(self.n, self.k)
             self.h = h_function(self.n, self.k)
-        if bottom:
+        else:
             self.first = first
             self.bottom = bottom
+            self.scnd = scnd
             self.g = None
             self.h = None
         return self
@@ -83,15 +85,31 @@ class lego_tower():
     def prepare_legos(self):
         for layer in self.layers:
             if layer.first:
-                up = layer
+                up = layer 
                 pass
             layer.g = g_function(layer.n, layer.k, up.n, up.k)
-            layer.h = h_function(layer.n, layer.k, up.n, up.k)
+            if up.first:
+                layer.h = (2 * (up.n ** (layer.k) - layer.n ** (up.k))) / (((up.n + layer.n) ** 2) + ((up.k + layer.k) ** 2))
+                layer.scnd = True
+            else:
+                layer.h = h_function(layer.n, layer.k, up.n, up.k)
             up = layer
         return False
-
     def calc_RT(self):
         self.prepare_legos()
+        for layer in self.layers:
+            if layer.first:
+                up = layer
+                pass
+            if layer.scnd:
+                #t2 = np.exp(-up.alpha) * (layer.g * (np.cos(up.gamma)) + (layer.h) * (np.sin(up.gamma)))
+                #u2 = np.exp(-up.alpha) * (layer.h * (np.cos(up.gamma)) - layer.g * (np.sin(up.gamma)))
+                #p12 = p2 + (g1 * t2) - h1 * u2
+                #q12 = q2 + (h1 * t2) + g1 * u2
+                #t12 = t2 + (g1 * p2) - h1 * q2
+                #u12 = u2 + (h1 * p2) + g1 * q2
+                pass
+            up = layer
         return False
 
 """
