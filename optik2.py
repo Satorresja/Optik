@@ -53,7 +53,7 @@ no = 1
 
 
 class lego:
-    def __init__(self, n, k, name, new=True):
+    def __init__(self, name, new=True):
         self.name = name
         if new:
             data = read_nk_file()
