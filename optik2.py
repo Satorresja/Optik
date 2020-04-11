@@ -34,8 +34,20 @@ def read_nk_file():
                 list(new_k)
             ],dtype=float)
         return new_data
-
-
+def pqtu_function(Up,Layer):
+    P = np.exp(Up.alpha) * np.cos(Up.gamma)
+    Q = np.exp(Up.alpha) * np.sin(Up.gamma)
+    T = np.exp(-Up.alpha) * (Layer.g * (np.cos(Up.gamma)) +
+    (Layer.h) * (np.sin(Up.gamma)))
+    U = np.exp(-Up.alpha) * (Layer.h * (np.cos(Up.gamma)) -
+    (Layer.g) * (np.sin(Up.gamma)))
+    return P,Q,T,U
+def rsvw_function(Top,Up):
+    R = np.exp(Top.alpha) * (Up.g * (np.cos(Top.gamma)) - Up.h * (np.sin(Top.gamma)))
+    S = np.exp(Top.alpha) * (Up.h * (np.cos(Top.gamma)) + Up.g * (np.sin(Top.gamma)))
+    V = np.exp(-Top.alpha) * np.cos(Top.gamma)
+    W = -np.exp(-Top.alpha) * np.sin(Top.gamma)
+    return R,S,V,W
 class lego:
     def __init__(self, n, k, name, new=True):
         self.name = name
@@ -82,6 +94,7 @@ class lego_tower():
             else:
                 layer.use(thickness, bottom=layer==args[-1])
             self.layers.append(layer)
+
     def prepare_legos(self):
         for layer in self.layers:
             if layer.first:
@@ -89,28 +102,67 @@ class lego_tower():
                 pass
             layer.g = g_function(layer.n, layer.k, up.n, up.k)
             if up.first:
-                layer.h = (2 * (up.n ** (layer.k) - layer.n ** (up.k))) / (((up.n + layer.n) ** 2) + ((up.k + layer.k) ** 2))
+                layer.h = (2 * (up.n ** (layer.k) - layer.n ** (up.k))) / (
+                    ((up.n + layer.n) ** 2) + ((up.k + layer.k) ** 2)
+                )
                 layer.scnd = True
             else:
                 layer.h = h_function(layer.n, layer.k, up.n, up.k)
             up = layer
         return False
-    def calc_RT(self):
+
+    def calc_pqtu(self):
         self.prepare_legos()
         for layer in self.layers:
             if layer.first:
                 up = layer
                 pass
             if layer.scnd:
-                #t2 = np.exp(-up.alpha) * (layer.g * (np.cos(up.gamma)) + (layer.h) * (np.sin(up.gamma)))
-                #u2 = np.exp(-up.alpha) * (layer.h * (np.cos(up.gamma)) - layer.g * (np.sin(up.gamma)))
-                #p12 = p2 + (g1 * t2) - h1 * u2
-                #q12 = q2 + (h1 * t2) + g1 * u2
-                #t12 = t2 + (g1 * p2) - h1 * q2
-                #u12 = u2 + (h1 * p2) + g1 * q2
-                pass
+                p,q,t,u = pqtu_function(up,layer)
+                p1n = p + (up.g * t) - up.h * u
+                q1n = q + (up.h * t) + up.g * u
+                t1n = t + (up.g * p) - up.h * q
+                u1n = u + (up.h * p) + up.g * q
+                top = up
+            elif up.scnd:
+                #third matrix
+                p1n_up, q1n_up, t1n_up, u1n_up = p1n, q1n, t1n, u1n
+                p,q,t,u = pqtu_function(up,layer)
+                r,s,v,w = rsvw_function(top,up)
+
+                r_1up = r + top.g * v - top.h * w
+                s_1up = s + top.h * v + top.g * w
+                v_1up = v + top.g * r - top.h * s
+                w_1up = w + top.h * r + top.g * s
+
+                p1n = p1n_up * p - q1n_up * q + r_1up * t - s_1up * u
+                q1n = q1n_up * p + p1n_up * q + s_1up * t + r_1up * u
+                t1n = t1n_up * p - u1n_up * q + v_1up * t - w_1up * u
+                u1n = u1n_up * p + t1n_up * q + w_1up * t + v_1up * u
+                top = up
+#            elif layer.bottom:
+#                #last matrix
+#                pass
+            else:
+                #matrices in the middle
+                p1n_top, q1n_top, t1n_top, u1n_top = p1n_up, q1n_up, t1n_up, u1n_up
+                p1n_up, q1n_up, t1n_up, u1n_up = p1n, q1n, t1n, u1n
+                r_1top, s_1top, v_1top, w_1top = r_1up, s_1up, v_1up, w_1up
+                p,q,t,u = pqtu_function(up,layer)
+                r,s,v,w = rsvw_function(top,up)
+
+                r_1up = p1n_top * r - q1n_top * s + r_1top * v - s_1top * w
+                s_1up = q1n_top * r + p1n_top * s + s_1top * v + r_1top * w
+                v_1up = t1n_top * r - u1n_top * s + v_1top * v - w_1top * w
+                w_1up = u1n_top * r + t1n_top * s + w_1top * v + v_1top * w
+
+                p1n = p1n_up * p - q1n_up * q + r_1up * t - s_1up * u
+                q1n = q1n_up * p + p1n_up * q + s_1up * t + r_1up * u
+                t1n = t1n_up * p - u1n_up * q + v_1up * t - w_1up * u
+                u1n = u1n_up * p + t1n_up * q + w_1up * t + v_1up * u
+                top = up
             up = layer
-        return False
+        return p1n, q1n, t1n, u1n
 
 """
 n = int(input('Number of layers: '))
