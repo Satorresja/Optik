@@ -48,6 +48,10 @@ def rsvw_function(Top,Up):
     V = np.exp(-Top.alpha) * np.cos(Top.gamma)
     W = -np.exp(-Top.alpha) * np.sin(Top.gamma)
     return R,S,V,W
+
+no = 1
+
+
 class lego:
     def __init__(self, n, k, name, new=True):
         self.name = name
@@ -81,6 +85,7 @@ class lego:
 
 class lego_tower():
     def __init__(self, *args):
+        self.only_two = False
         self.n_layers = len(args) if len(args) >= 2 else "ERROR"
         if self.n_layers == "ERROR":
             raise "The cell must 2 layers or more"
@@ -94,6 +99,8 @@ class lego_tower():
             else:
                 layer.use(thickness, bottom=layer==args[-1])
             self.layers.append(layer)
+        self.p, self.q, self.t, self.u = False, False, False, False
+        self.R,T = False, False
 
     def prepare_legos(self):
         for layer in self.layers:
@@ -117,13 +124,14 @@ class lego_tower():
             if layer.first:
                 up = layer
                 pass
-            if layer.scnd:
+            elif layer.scnd:
                 p,q,t,u = pqtu_function(up,layer)
                 p1n = p + (up.g * t) - up.h * u
                 q1n = q + (up.h * t) + up.g * u
                 t1n = t + (up.g * p) - up.h * q
                 u1n = u + (up.h * p) + up.g * q
                 top = up
+                self.only_two = layer.scnd and layer.bottom
             elif up.scnd:
                 #third matrix
                 p1n_up, q1n_up, t1n_up, u1n_up = p1n, q1n, t1n, u1n
@@ -140,9 +148,6 @@ class lego_tower():
                 t1n = t1n_up * p - u1n_up * q + v_1up * t - w_1up * u
                 u1n = u1n_up * p + t1n_up * q + w_1up * t + v_1up * u
                 top = up
-#            elif layer.bottom:
-#                #last matrix
-#                pass
             else:
                 #matrices in the middle
                 p1n_top, q1n_top, t1n_top, u1n_top = p1n_up, q1n_up, t1n_up, u1n_up
@@ -162,15 +167,41 @@ class lego_tower():
                 u1n = u1n_up * p + t1n_up * q + w_1up * t + v_1up * u
                 top = up
             up = layer
-        return p1n, q1n, t1n, u1n
+        self.p, self.q, self.t, self.u = p1n, q1n, t1n, u1n
+        R = ((self.t ** 2) + (self.u ** 2)) / ((self.p ** 2) + (self.q ** 2)) * 100
+        return R
 
-"""
-n = int(input('Number of layers: '))
-data = list()
-for i in range(n):
-    data.append(np.genfromtxt(input('Name of file layer '+str(i+1)+':')))
-    if i == 0:
-        lambd = data[0][:,][:, 0]
-    thickness_layers = float(input('Thickness of file layer '+str(i+1)+': '))
-    # thickness_layers = list(float(x) for x in input().split(',')) #for read a LIST INPUT
-"""
+    def calc_RT(self, new=True):
+        if new:
+            self.R = self.calc_pqtu()
+            if self.only_two:
+                up, layer = self.layers[0:2]
+                l = (
+                    (1 + up.g) * (1 + layer.g)
+                    - layer.h * (1 + up.g)
+                    - up.h * (1 + layer.g)
+                )
+                m = (
+                    up.h * (1 + layer.g)
+                    + layer.h * (1 + up.g)
+                    - up.h * layer.h
+                )
+                self.T = (layer.n / no) * ((l ** 2) + (m ** 2)) / ((self.p ** 2) + (self.q ** 2)) * 100
+            else:
+                top, up, layer = self.layers[0:3]
+                l = (
+                    (1 + top.g) * (1 + up.g) * (1 + layer.g)
+                    - up.h * layer.h * (1 + top.g)
+                    - layer.h * top.h * (1 + up.g)
+                    - top.h * up.h * (1 + layer.g)
+                )
+                m = (
+                    top.h * (1 + up.g) * (1 + layer.g)
+                    + up.h * (1 + layer.g) * (1 + top.g)
+                    + layer.h * (1 + top.g) * (1 + up.g)
+                    - top.h * up.h * layer.h
+                )
+                self.T = (layer.n / no) * ((l ** 2) + (m ** 2)) / ((self.p ** 2) + (self.q ** 2)) * 100
+            return self.R, self.T
+        else:
+            return self.R, self.T
