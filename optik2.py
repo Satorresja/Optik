@@ -7,7 +7,9 @@ def g_function(ni,ki,n_back=1.0,k_back=0):
         )
     return ans
 def h_function(ni,ki,n_back=1.0,k_back=0):
-    ans  = 2*(n_back*ki - ni*k_back) / ((n_back + ni)**2 + (k_back + ki)**2)
+    ans  = 2*(n_back*ki - ni*k_back) / (
+        (n_back + ni)**2 + (k_back + ki)**2
+        )
     return ans
 def alpha_function(d, k, lambd):
     ans = (2 * np.pi * k * d) / lambd
@@ -21,7 +23,7 @@ def read_nk_file():
     data = data.T
     if len(data) != 3:
         print('3 cols with Wavelength(nm) n k. Try again!')
-        return False
+        raise ValueError("Can't upload data")
     else:
         wl, n, k = data
         step = 0.5
@@ -43,13 +45,13 @@ def pqtu_function(Up,Layer):
     (Layer.g) * (np.sin(Up.gamma)))
     return P,Q,T,U
 def rsvw_function(Top,Up):
-    R = np.exp(Top.alpha) * (Up.g * (np.cos(Top.gamma)) - Up.h * (np.sin(Top.gamma)))
-    S = np.exp(Top.alpha) * (Up.h * (np.cos(Top.gamma)) + Up.g * (np.sin(Top.gamma)))
+    R = np.exp(Top.alpha) * (Up.g * (np.cos(Top.gamma)) 
+    - Up.h * (np.sin(Top.gamma)))
+    S = np.exp(Top.alpha) * (Up.h * (np.cos(Top.gamma)) 
+    + Up.g * (np.sin(Top.gamma)))
     V = np.exp(-Top.alpha) * np.cos(Top.gamma)
     W = -np.exp(-Top.alpha) * np.sin(Top.gamma)
     return R,S,V,W
-
-no = 1
 
 
 class lego:
@@ -57,10 +59,7 @@ class lego:
         self.name = name
         if new:
             data = read_nk_file()
-            if data:
-                self.k, self.n, self.lambd = data[0], data[1], data[2]
-            else:
-                raise ValueError("Can't upload data")
+            self.lambd, self.n, self.k  = data[0], data[1], data[2]
         else:
             raise "Buscar name en la base, no sé cómo :v"
 
@@ -92,7 +91,9 @@ class lego_tower():
         self.layers = []
         first = True
         for layer in args:
-            thickness = float(input('Thicknes of {}:'.format(layer.name)))
+            thickness = float(input(
+                'Thickness of {}:'.format(layer.name)
+                ))
             if first:
                 layer.use(thickness, first=first)
                 first = False
@@ -118,7 +119,7 @@ class lego_tower():
             up = layer
         return False
 
-    def calc_pqtu(self):
+    def calc_R(self):
         self.prepare_legos()
         for layer in self.layers:
             if layer.first:
@@ -147,6 +148,10 @@ class lego_tower():
                 q1n = q1n_up * p + p1n_up * q + s_1up * t + r_1up * u
                 t1n = t1n_up * p - u1n_up * q + v_1up * t - w_1up * u
                 u1n = u1n_up * p + t1n_up * q + w_1up * t + v_1up * u
+
+                if not self.only_two:
+                    self.p_T = p1n
+                    self.q_T = q1n
                 top = up
             else:
                 #matrices in the middle
@@ -168,12 +173,14 @@ class lego_tower():
                 top = up
             up = layer
         self.p, self.q, self.t, self.u = p1n, q1n, t1n, u1n
-        R = ((self.t ** 2) + (self.u ** 2)) / ((self.p ** 2) + (self.q ** 2)) * 100
+        R = ((self.t ** 2) + (self.u ** 2)) / (
+            (self.p ** 2) + (self.q ** 2)) * 100
         return R
 
-    def calc_RT(self, new=True):
+    def RT(self, new=True):
+        no = 1
         if new:
-            self.R = self.calc_pqtu()
+            self.R = self.calc_R()
             if self.only_two:
                 up, layer = self.layers[0:2]
                 l = (
@@ -186,7 +193,8 @@ class lego_tower():
                     + layer.h * (1 + up.g)
                     - up.h * layer.h
                 )
-                self.T = (layer.n / no) * ((l ** 2) + (m ** 2)) / ((self.p ** 2) + (self.q ** 2)) * 100
+                self.T = (layer.n / no) * ((l ** 2) + (m ** 2)) / (
+                    (self.p ** 2) + (self.q ** 2)) * 100
             else:
                 top, up, layer = self.layers[0:3]
                 l = (
@@ -201,7 +209,8 @@ class lego_tower():
                     + layer.h * (1 + top.g) * (1 + up.g)
                     - top.h * up.h * layer.h
                 )
-                self.T = (layer.n / no) * ((l ** 2) + (m ** 2)) / ((self.p ** 2) + (self.q ** 2)) * 100
+                self.T = (layer.n / no) * ((l ** 2) + (m ** 2)) / (
+                    (self.p_T ** 2) + (self.q_T ** 2)) * 100
             return self.R, self.T
         else:
             return self.R, self.T
