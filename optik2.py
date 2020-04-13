@@ -17,8 +17,9 @@ def alpha_function(d, k, lambd):
 def gamma_function(d, n, lambd):
     ans = (2 * np.pi * n * d) / lambd
     return ans
-def read_nk_file():
-    file_name = input('File Name:')
+def read_nk_file(file_name):
+    if not file_name:
+        file_name = input('File Name:')
     data = np.loadtxt(file_name,dtype=float, skiprows=1) 
     data = data.T
     if len(data) != 3:
@@ -55,10 +56,10 @@ def rsvw_function(Top,Up):
 
 
 class lego:
-    def __init__(self, name, new=True):
+    def __init__(self, name, new=True, file_name=False):
         self.name = name
         if new:
-            data = read_nk_file()
+            data = read_nk_file(file_name)
             self.lambd, self.n, self.k  = data[0], data[1], data[2]
         else:
             raise "Buscar name en la base, no sé cómo :v"
@@ -83,17 +84,26 @@ class lego:
 
 
 class lego_tower():
-    def __init__(self, *args):
+    def __init__(self, *args, thickness_data=False):
         self.only_two = False
         self.n_layers = len(args) if len(args) >= 2 else "ERROR"
         if self.n_layers == "ERROR":
             raise "The cell must 2 layers or more"
         self.layers = []
         first = True
-        for layer in args:
-            thickness = float(input(
-                'Thickness of {}:'.format(layer.name)
-                ))
+        for i in range(len(args)):
+            layer = args[i]
+            if not thickness:
+                thickness = float(input(
+                    'Thickness of {}:'.format(layer.name)
+                    ))
+            else:
+                if len(args) != len(thickness_data):
+                    raise (
+                "Thickness_data list do not have the" +
+                f" {len(args)} values.")
+                else:
+                    thickness = thickness_data[i]
             if first:
                 layer.use(thickness, first=first)
                 first = False
