@@ -2,7 +2,7 @@
 import numpy as np
 
 def g_function(ni,ki,n_back=1.0,k_back=0):
-    ans  = (n_back**2 -ni**2 + k_back**2 -ki**2) / (
+    ans  = (n_back**2 - ni**2 + k_back**2 - ki**2) / (
         (n_back + ni)**2 + (k_back + ki)**2
         )
     return ans
@@ -20,7 +20,7 @@ def gamma_function(d, n, lambd):
 def read_nk_file(file_name):
     if not file_name:
         file_name = input('File Name:')
-    data = np.loadtxt(file_name,dtype=float, skiprows=1) 
+    data = np.loadtxt(file_name,dtype=float)#, skiprows=1) 
     data = data.T
     if len(data) != 3:
         print('3 cols with Wavelength(nm) n k. Try again!')
@@ -28,7 +28,7 @@ def read_nk_file(file_name):
     else:
         wl, n, k = data
         step = 0.5
-        new_wl = np.arange(280.0,wl.max(),step,dtype=float)
+        new_wl = np.arange(280.0,wl.max()+0.5,step,dtype=float)
         new_n = np.interp(new_wl,wl,n)
         new_k = np.interp(new_wl,wl,k)
         new_data = np.array([
@@ -41,7 +41,7 @@ def pqtu_function(Up,Layer):
     P = np.exp(Up.alpha) * np.cos(Up.gamma)
     Q = np.exp(Up.alpha) * np.sin(Up.gamma)
     T = np.exp(-Up.alpha) * (Layer.g * (np.cos(Up.gamma)) +
-    (Layer.h) * (np.sin(Up.gamma)))
+    Layer.h * (np.sin(Up.gamma)))
     U = np.exp(-Up.alpha) * (Layer.h * (np.cos(Up.gamma)) -
     (Layer.g) * (np.sin(Up.gamma)))
     return P,Q,T,U
@@ -93,7 +93,7 @@ class lego_tower():
         first = True
         for i in range(len(args)):
             layer = args[i]
-            if not thickness:
+            if not thickness_data:
                 thickness = float(input(
                     'Thickness of {}:'.format(layer.name)
                     ))
@@ -117,15 +117,17 @@ class lego_tower():
         for layer in self.layers:
             if layer.first:
                 up = layer 
-                pass
-            layer.g = g_function(layer.n, layer.k, up.n, up.k)
+                continue
+            layer.g = g_function(layer.n, layer.k, n_back=up.n, k_back=up.k)
             if up.first:
                 layer.h = (2 * (up.n ** (layer.k) - layer.n ** (up.k))) / (
                     ((up.n + layer.n) ** 2) + ((up.k + layer.k) ** 2)
                 )
                 layer.scnd = True
             else:
-                layer.h = h_function(layer.n, layer.k, up.n, up.k)
+                layer.h = h_function(layer.n, layer.k,
+                 n_back=up.n, k_back=up.k
+                 )
             up = layer
         return False
 
@@ -134,7 +136,7 @@ class lego_tower():
         for layer in self.layers:
             if layer.first:
                 up = layer
-                pass
+                continue
             elif layer.scnd:
                 p,q,t,u = pqtu_function(up,layer)
                 p1n = p + (up.g * t) - up.h * u
@@ -205,6 +207,7 @@ class lego_tower():
                 )
                 self.T = (layer.n / no) * ((l ** 2) + (m ** 2)) / (
                     (self.p ** 2) + (self.q ** 2)) * 100
+                self.Abs = 100 - (R + T)
             else:
                 top, up, layer = self.layers[0:3]
                 l = (
@@ -221,6 +224,8 @@ class lego_tower():
                 )
                 self.T = (layer.n / no) * ((l ** 2) + (m ** 2)) / (
                     (self.p_T ** 2) + (self.q_T ** 2)) * 100
+                self.Abs = 100 - (R + T)
             return self.R, self.T
         else:
+            self.Abs = 100 - (R + T)
             return self.R, self.T
