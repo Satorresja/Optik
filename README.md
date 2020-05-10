@@ -1,5 +1,5 @@
 # optik
-* Project by: Santiago Torres 
-* Collaborator: Me
+* Project by: Santiago Torres Jaramillo
+* Collaborator: OScar Bolaños
 
-Calculate Reflectance and Transmitance of cell using Python OOP.
+Calculate Reflectance and Transmitance of materials using Python OOP.
